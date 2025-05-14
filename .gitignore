@@ -1,1 +1,6 @@
 /data
+.python-version
+pyproject.toml
+uv.lock
+.venv
+.DS_Store
