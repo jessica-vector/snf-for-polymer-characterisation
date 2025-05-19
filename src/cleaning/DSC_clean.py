@@ -102,3 +102,4 @@ def clean_dsc_batch(input_directory: Union[str, Path]) -> pd.DataFrame:
         raise ValueError(f"No valid CSV files found in {input_directory}")
     batch_data = pd.concat(batch_frames, ignore_index=True)
     return batch_data
+    cleaned_data.columns = ["Temperature", "Heat Flow"]
