@@ -68,7 +68,7 @@ def clean_ftir_batch(input_directory: Union[str, Path]) -> pd.DataFrame:
     """
     input_directory = Path(input_directory)
     batch_frames = []
-    for file_path in input_directory.glob("*.csv"):
+    for file_path in input_directory.glob("*.CSV"):
         try:
             cleaned = clean_ftir_spectrum(file_path)
             cleaned["file_name"] = file_path.name

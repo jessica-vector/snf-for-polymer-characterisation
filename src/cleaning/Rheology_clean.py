@@ -10,7 +10,7 @@ def clean_rheology_spectrum(
 ) -> pd.DataFrame:
     """
     Cleans a single Flow Rheology spectrum CSV file.
-    Extracts shear rate and viscosity columns, ensures float types and no NaNs.
+    Extracts shear rate (column 2) and viscosity (column 3) columns, ensures float types and no NaNs.
     Optionally writes cleaned data to output directory.
 
     Args:
@@ -22,24 +22,11 @@ def clean_rheology_spectrum(
     """
     file_loc = Path(file_loc)
 
-    # Read the data
-    df = pd.read_csv(file_loc)
+    # Read the data, skipping both header and units rows
+    df = pd.read_csv(file_loc, skiprows=2)
 
-    # Identify shear rate and viscosity columns
-    shear_candidates = [
-        col for col in df.columns if re.search(r"shear.*rate", col, re.IGNORECASE)
-    ]
-    visc_candidates = [
-        col for col in df.columns if re.search(r"viscosity", col, re.IGNORECASE)
-    ]
-    if not shear_candidates:
-        raise ValueError(f"No shear rate column found in {file_loc.name}")
-    if not visc_candidates:
-        raise ValueError(f"No viscosity column found in {file_loc.name}")
-    shear_col = shear_candidates[0]
-    visc_col = visc_candidates[0]
-
-    cleaned_data = df[[shear_col, visc_col]].copy()
+    # Use columns 2 and 3 for shear rate and viscosity
+    cleaned_data = df.iloc[:, 1:3].copy()
     cleaned_data.columns = ["Shear Rate", "Viscosity"]
 
     # Remove any rows that are not fully numeric before conversion

@@ -22,25 +22,16 @@ def clean_tga_spectrum(
     """
     file_loc = Path(file_loc)
 
-    # Read the data
-    df = pd.read_csv(file_loc, sep='\t')
+    # Read the data, skipping the header row
+    df = pd.read_csv(file_loc, 
+                     skiprows=2,
+                     sep='\s+',
+                     names=['Index', 't', 'Weight', 'Tr'])
+    
 
-    # Identify temperature and weight columns
-    temp_candidates = [
-        col for col in df.columns if re.search(r"(?:temp|tr)", col, re.IGNORECASE)
-    ]
-    weight_candidates = [
-        col for col in df.columns if re.search(r"weight", col, re.IGNORECASE)
-    ]
-    if not temp_candidates:
-        raise ValueError(f"No temperature column found in {file_loc.name}")
-    if not weight_candidates:
-        raise ValueError(f"No weight column found in {file_loc.name}")
-    temp_col = temp_candidates[0]
-    weight_col = weight_candidates[0]
-
-    cleaned_data = df[[temp_col, weight_col]].copy()
-    cleaned_data.columns = ["Temperature", "Weight"]
+    # Select only the Weight and Temperature columns
+    cleaned_data = df[['Weight', 'Tr']].copy()
+    cleaned_data.columns = ['Weight', 'Temperature']
 
     # Remove any rows that are not fully numeric before conversion
     cleaned_data = cleaned_data[
@@ -49,7 +40,7 @@ def clean_tga_spectrum(
                 lambda val: isinstance(val, (int, float))
                 or (
                     isinstance(val, str)
-                    and re.match(r"^-?\d+(?:\.\d+)?$", str(val).strip())
+                    and re.match(r"^-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?$", str(val).strip())
                 )
             )
         ).all(axis=1)
