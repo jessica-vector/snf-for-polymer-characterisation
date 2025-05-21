@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from pathlib import Path
 from typing import Union
 
@@ -37,12 +38,13 @@ def normalize_tga(
     return df
 
 
-def prepare_data_for_dtw(df: pd.DataFrame) -> dict:
+def prepare_data_for_dtw(df: pd.DataFrame, n_points: int = 3000) -> dict:
     """
-    Prepare TGA data for Dynamic Time Warping (DTW) analysis.
+    Prepare TGA data for analysis by interpolating all samples to the same temperature grid.
     
     Args:
         df: DataFrame containing TGA data with columns 'Temperature', 'weight_percentage', and 'file_name'
+        n_points: Number of points to interpolate to (default 3000)
         
     Returns:
         dict: Mapping of sample_id -> 2D array [Temperature, weight_percentage]
@@ -50,12 +52,27 @@ def prepare_data_for_dtw(df: pd.DataFrame) -> dict:
     # Group data by file_name
     grouped = df.groupby('file_name')
     
-    # Create dictionary mapping sample_id to 2D array
+    # Find global temperature range
+    temp_min = df['Temperature'].min()
+    temp_max = df['Temperature'].max()
+    
+    # Create common temperature grid
+    temp_grid = np.linspace(temp_min, temp_max, n_points)
+    
+    # Create dictionary mapping sample_id to interpolated 2D array
     profiles = {}
     for sample_id, group in grouped:
         # Sort by temperature to ensure consistent ordering
         sorted_group = group.sort_values('Temperature')
+        
+        # Interpolate weight percentage to common temperature grid
+        interpolated = np.interp(
+            temp_grid,
+            sorted_group['Temperature'].values,
+            sorted_group['weight_percentage'].values
+        )
+        
         # Create 2D array [Temperature, weight_percentage]
-        profiles[sample_id] = sorted_group[['Temperature', 'weight_percentage']].values
+        profiles[sample_id] = np.column_stack((temp_grid, interpolated))
     
     return profiles

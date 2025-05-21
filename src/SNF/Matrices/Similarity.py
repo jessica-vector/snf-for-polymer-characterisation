@@ -64,9 +64,12 @@ def compute_similarity_matrix(profiles, metric='dtw'):
                 raise ValueError(f"Unsupported metric: {metric}. Choose from: 'dtw', 'euclidean', 'pearson', 'cosine'")
     
     # Convert distance matrix to similarity matrix
-    # For DTW and Euclidean: sim = 1 / (1 + dist)
+    # For DTW and Euclidean: scale distances first then sim = 1 / (1 + dist)
     # For Pearson and Cosine: sim = 1 - dist (since they're already in [0,1] range)
     if metric in ['dtw', 'euclidean']:
+        # Scale distances to [0,1] range
+        if dist_matrix.max() > 0:  # Avoid division by zero
+            dist_matrix = dist_matrix / dist_matrix.max()
         sim_matrix = 1 / (1.0 + dist_matrix)
     else:  # pearson, cosine
         sim_matrix = 1 - dist_matrix

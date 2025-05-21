@@ -25,7 +25,7 @@ similarity_tga_data = process.prepare_data_for_dtw(processed_tga_data)
 # print(processed_tga_data)
 
 # Get both sample IDs and similarity matrix
-sample_ids, similarity_matrix = matrices.compute_similarity_matrix(similarity_tga_data, metric='dtw')
+sample_ids, similarity_matrix = matrices.compute_similarity_matrix(similarity_tga_data, metric='cosine')
 
 # Create a heatmap visualization of the similarity matrix
 plt.figure(figsize=(10, 8))
