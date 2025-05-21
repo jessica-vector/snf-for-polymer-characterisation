@@ -1,118 +1,81 @@
-import os
 import re
+from pathlib import Path
+from typing import Union
 
-# Define the source directory containing the files
-# IMPORTANT: Replace this path with the actual path to your folder if it's different
-source_directory = "/Users/jessicaagyemang/Documents/snf/data/FTIR"
+import pandas as pd
 
-# Define the destination directory where renamed files will be moved
-# IMPORTANT: You can change this path if you want the new folder elsewhere
-destination_directory = "/Users/jessicaagyemang/Documents/snf/data/FTIR_renamed"
-
-print(f"Checking files in source directory: {source_directory}")
-print(f"Renamed files will be moved to: {destination_directory}")
-
-# Check if the source directory exists
-if not os.path.isdir(source_directory):
-    print(f"Error: Source directory not found at {source_directory}")
-else:
-    # Create the destination directory if it doesn't exist
-    if not os.path.exists(destination_directory):
-        try:
-            os.makedirs(destination_directory)
-            print(f"Created destination directory: {destination_directory}")
-        except OSError as e:
-            print(f"Error creating destination directory {destination_directory}: {e}")
-            # Exit the script if the destination directory cannot be created
-            exit()
-
-    # Iterate through all items in the source directory
-    for filename in os.listdir(source_directory):
-        # Construct the full path to the original file
-        old_filepath = os.path.join(source_directory, filename)
-
-        # Check if it's a file (not a directory)
-        if os.path.isfile(old_filepath):
-            # Define the updated pattern to look for, specifically starting with 'CPI-5-'
-            # This regex now accounts for a file extension (like .CSV) after the number.
-            # It looks for:
-            # ^(CPI-5-[\w-]+)  -> Starts with 'CPI-5-', followed by word chars/hyphens (captured as group 1)
-            # \.              -> A literal dot
-            # (\w+)           -> One or more word characters (captured as group 2)
-            # \.              -> A literal dot (before the extension)
-            # (CSV|csv)$      -> The extension 'CSV' or 'csv' at the end of the string (captured as group 3)
-            pattern = re.compile(r"^(CPI-5-[\w-]+)\.(\w+)\.(CSV|csv)$")
-
-            # Try to match the pattern in the filename
-            match = pattern.match(filename)
-
-            # --- Debugging Prints ---
-            print(f"\nProcessing file: '{filename}'")
-            if match:
-                print("  Pattern matched.")
-                # Extract the parts before and after the dot we want to replace
-                part_before_dot = match.group(1)  # e.g., 'CPI-5-9'
-                part_after_dot = match.group(2)  # e.g., '2'
-                extension = match.group(3)  # e.g., 'CSV'
-
-                # Construct the new filename by replacing the dot with an underscore and keeping the extension
-                new_filename = f"{part_before_dot}_{part_after_dot}.{extension}"
-                print(f"  Proposed new name: '{new_filename}'")
-                print(f"  Old path: '{old_filepath}'")
-                new_filepath = os.path.join(destination_directory, new_filename)
-                print(f"  New path: '{new_filepath}'")
-            else:
-                print("  Pattern did NOT match.")
-            # --- End Debugging Prints ---
-
-            # If the pattern matches
-            if match:
-                # Extract the parts before and after the dot we want to replace
-                part_before_dot = match.group(1)  # e.g., 'CPI-5-9'
-                part_after_dot = match.group(2)  # e.g., '2'
-                extension = match.group(3)  # e.g., 'CSV'
-
-                # Construct the new filename by replacing the dot with an underscore and keeping the extension
-                new_filename = f"{part_before_dot}_{part_after_dot}.{extension}"
-                # Construct the full path to the new file in the destination directory
-                new_filepath = os.path.join(destination_directory, new_filename)
-
-                # Check if the new filename is different from the old one (in the source directory)
-                # and if a file with the new name doesn't already exist in the destination
-                if os.path.exists(new_filepath):
-                    print(
-                        f"Skipping '{filename}': File with new name '{new_filename}' already exists in destination."
-                    )
-                elif old_filepath != new_filepath:
-                    try:
-                        # Rename (and move) the file
-                        os.rename(old_filepath, new_filepath)
-                        print(
-                            f"SUCCESS: Renamed and moved '{filename}' to '{new_filename}' in {destination_directory}"
-                        )
-                    except OSError as e:
-                        print(f"Error renaming and moving file {filename}: {e}")
-                # The 'else' for old_filepath != new_filepath is not needed here as we are moving to a new dir
-
-            # else:
-            # print(f"Skipping '{filename}': Does not match the expected 'CPI-5-X.Y.CSV' pattern.")
-
-print("Renaming and moving process finished.")
-
-# Pseudocode for modular FTIR data processing
-
-
-def process_ftir_data(raw_data):
+def clean_ftir_spectrum(
+    file_loc: Union[str, Path], write_flag: bool = False
+) -> pd.DataFrame:
     """
-    Process raw FTIR data and return cleaned/processed data.
+    Cleans a single FTIR spectrum CSV file.
+    Extracts wavenumber and absorbance columns, ensures float types and no NaNs.
+    Optionally writes cleaned data to output directory.
+
     Args:
-        raw_data: The raw data from FTIR measurement.
+        file_loc: Path to the input CSV file.
+        write_flag: If True, writes cleaned data to output directory.
+
     Returns:
-        Processed data ready for analysis.
+        Cleaned pandas DataFrame.
     """
-    # TODO: Implement FTIR data cleaning steps
-    pass
+    file_loc = Path(file_loc)
 
+    # Read the data
+    df = pd.read_csv(file_loc)
 
-# Add more FTIR-specific processing functions as needed
-# ... existing code ...
+    # Extract first two columns as wavenumber and absorbance
+    cleaned_data = df.iloc[:, :2].copy()
+    cleaned_data.columns = ["Wavenumber", "Absorbance"]
+
+    # Remove any rows that are not fully numeric before conversion
+    cleaned_data = cleaned_data[
+        cleaned_data.apply(
+            lambda x: x.map(
+                lambda val: isinstance(val, (int, float))
+                or (
+                    isinstance(val, str)
+                    and re.match(r"^-?\d+(?:\.\d+)?$", str(val).strip())
+                )
+            )
+        ).all(axis=1)
+    ]
+
+    try:
+        cleaned_data = cleaned_data.astype(float)
+    except Exception as e:
+        raise ValueError(f"Could not convert data to float in {file_loc.name}: {e}")
+
+    cleaned_data = cleaned_data.dropna()
+
+    if write_flag:
+        output_dir = Path("data/output_data/ftir")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_file = output_dir / f"cleaned_{file_loc.name}"
+        cleaned_data.to_csv(output_file, index=False)
+
+    return cleaned_data
+
+def clean_ftir_batch(input_directory: Union[str, Path]) -> pd.DataFrame:
+    """
+    Cleans all FTIR spectrum CSV files in a directory and concatenates them into a single DataFrame.
+
+    Args:
+        input_directory: Path to the directory containing CSV files.
+
+    Returns:
+        Concatenated DataFrame with an added 'file_name' column.
+    """
+    input_directory = Path(input_directory)
+    batch_frames = []
+    for file_path in input_directory.glob("*.CSV"):
+        try:
+            cleaned = clean_ftir_spectrum(file_path)
+            cleaned["file_name"] = file_path.name
+            batch_frames.append(cleaned)
+        except Exception as e:
+            print(f"Skipping {file_path.name}: {e}")
+    if not batch_frames:
+        raise ValueError(f"No valid CSV files found in {input_directory}")
+    batch_data = pd.concat(batch_frames, ignore_index=True)
+    return batch_data
