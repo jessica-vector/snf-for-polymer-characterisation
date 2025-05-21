@@ -1,5 +1,6 @@
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
+from dtw import dtw
 
 def normalize_rheology(data: pd.DataFrame) -> pd.DataFrame:
     """

@@ -9,13 +9,15 @@ def normalize_dsc(
 ) -> pd.DataFrame:
     """
     Normalizes DSC heat flow data using min-max scaling to range [0,1].
+    Only keeps the normalized heat flow values, removing the original heat flow data.
+    Columns are ordered with normalized_heat_flow appearing after Temperature.
     
     Args:
         input_data: Either a DataFrame or path to cleaned DSC data CSV file
         write_flag: If True, writes normalized data to output directory
         
     Returns:
-        Normalized pandas DataFrame with heat flow values scaled between 0 and 1
+        Normalized pandas DataFrame with only normalized heat flow values
     """
     # Handle input data
     if isinstance(input_data, (str, Path)):
@@ -29,6 +31,12 @@ def normalize_dsc(
     
     # Apply min-max scaling
     df['normalized_heat_flow'] = (df['Heat Flow'] - min_flow) / (max_flow - min_flow)
+    
+    # Drop the original Heat Flow column
+    df = df.drop('Heat Flow', axis=1)
+    
+    # Reorder columns to put normalized_heat_flow after Temperature
+    df = df[['Temperature', 'normalized_heat_flow', 'file_name']]
     
     if write_flag:
         output_dir = Path("data/output_data/dsc")

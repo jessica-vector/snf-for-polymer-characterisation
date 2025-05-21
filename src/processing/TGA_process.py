@@ -35,3 +35,27 @@ def normalize_tga(
         df.to_csv(output_file, index=False)
     
     return df
+
+
+def prepare_data_for_dtw(df: pd.DataFrame) -> dict:
+    """
+    Prepare TGA data for Dynamic Time Warping (DTW) analysis.
+    
+    Args:
+        df: DataFrame containing TGA data with columns 'Temperature', 'weight_percentage', and 'file_name'
+        
+    Returns:
+        dict: Mapping of sample_id -> 2D array [Temperature, weight_percentage]
+    """
+    # Group data by file_name
+    grouped = df.groupby('file_name')
+    
+    # Create dictionary mapping sample_id to 2D array
+    profiles = {}
+    for sample_id, group in grouped:
+        # Sort by temperature to ensure consistent ordering
+        sorted_group = group.sort_values('Temperature')
+        # Create 2D array [Temperature, weight_percentage]
+        profiles[sample_id] = sorted_group[['Temperature', 'weight_percentage']].values
+    
+    return profiles
