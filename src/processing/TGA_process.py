@@ -62,6 +62,9 @@ def prepare_data_for_dtw(df: pd.DataFrame, n_points: int = 3000) -> dict:
     # Create dictionary mapping sample_id to interpolated 2D array
     profiles = {}
     for sample_id, group in grouped:
+        # Remove .txt extension from sample_id
+        clean_id = Path(sample_id).stem
+        
         # Sort by temperature to ensure consistent ordering
         sorted_group = group.sort_values('Temperature')
         
@@ -73,6 +76,6 @@ def prepare_data_for_dtw(df: pd.DataFrame, n_points: int = 3000) -> dict:
         )
         
         # Create 2D array [Temperature, weight_percentage]
-        profiles[sample_id] = np.column_stack((temp_grid, interpolated))
+        profiles[clean_id] = np.column_stack((temp_grid, interpolated))
     
     return profiles

@@ -5,6 +5,7 @@ import src.SNF.Matrices as matrices
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
+from pathlib import Path
 
 # Processing and Cleaning
 
@@ -25,17 +26,33 @@ similarity_tga_data = process.prepare_data_for_dtw(processed_tga_data)
 # print(processed_tga_data)
 
 # Get both sample IDs and similarity matrix
-sample_ids, similarity_matrix = matrices.compute_similarity_matrix(similarity_tga_data, metric='cosine')
+sample_ids, similarity_matrix = matrices.compute_similarity_matrix(similarity_tga_data, metric='euclidean')
+
+# Define the desired sample order
+desired_order = [
+    'CPI-5-1', 'CPI-5-2', 'CPI-5-3', 'CPI-5-4', 'CPI-5-5', 'CPI-5-6', 'CPI-5-7', 'CPI-5-8', 
+    'CPI-5-9', 'CPI-5-10', 'CPI-5-11', 'CPI-5-12', 'LDPE-Virgin', 'LDPE-Carmel-Eco', 
+    'LDPE-EXP1', 'LDPE-EXP4'
+]
+
+# Create a mapping from current sample IDs to desired order
+clean_sample_ids = [Path(id).stem for id in sample_ids]
+current_to_desired = {old: new for old, new in zip(clean_sample_ids, desired_order)}
+
+# Reorder the similarity matrix
+order_mapping = {id: i for i, id in enumerate(desired_order)}
+current_order = [order_mapping[current_to_desired[id]] for id in clean_sample_ids]
+reordered_matrix = similarity_matrix[np.ix_(current_order, current_order)]
 
 # Create a heatmap visualization of the similarity matrix
 plt.figure(figsize=(10, 8))
-sns.heatmap(similarity_matrix, 
+sns.heatmap(reordered_matrix, 
             cmap='viridis', 
             annot=True, 
             fmt='.2f', 
             cbar_kws={'label': 'Similarity Score'},
-            xticklabels=sample_ids,
-            yticklabels=sample_ids)
+            xticklabels=desired_order,
+            yticklabels=desired_order)
 plt.title('TGA Data Similarity Matrix')
 plt.xlabel('Sample ID')
 plt.ylabel('Sample ID')
